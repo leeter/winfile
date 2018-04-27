@@ -13,19 +13,34 @@
 #include <iterator>
 #include <atomic>
 #include <deque>
-
 #include <PathCch.h>
 #include "winfile.h"
 #include "treectl.h"
 #include "lfn.h"
 
+namespace {
+	class dnode : public DNODE {
+	public:
+		dnode(PDNODE pParentNode, WCHAR *szName, DWORD dwAttribs)
+		{
+			this->pParent = pParentNode;
+			this->nLevels = pParentNode ? (pParentNode->nLevels + (BYTE)1) : (BYTE)0;
+			this->wFlags = (BYTE)NULL;
+			this->dwNetType = (DWORD)-1;
+			this->dwAttribs = dwAttribs;
+			this->dwExtent = (DWORD)-1;
+		}
+	};
+	std::atomic_uint32_t g_driveScanEpoc;				// incremented when a refresh is requested; old bags are discarded; scans are aborted if epoc changes		
+	struct values_bag {
+		std::deque<dnode> allNodes; // holds the values from the scan per g_driveScanEpoc
+		BagOValues<PDNODE> BagOCDrive; // holds the nodes we created to make freeing them simpler (e.g., because some are reused)
+	};
 
-void BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, LPTSTR szRoot, PDNODE pNode);
-void FreeDirectoryBagOValues(BagOValues<PDNODE> *pbov);
+	std::atomic<values_bag*> g_valuesBag;
 
-DWORD g_driveScanEpoc;				// incremented when a refresh is requested; old bags are discarded; scans are aborted if epoc changes
-std::atomic<BagOValues<PDNODE> *> g_pBagOCDrive;	// holds the values from the scan per g_driveScanEpoc
-std::atomic<std::vector<PDNODE> *>g_allNodes;			// holds the nodes we created to make freeing them simpler (e.g., because some are reused)
+	
+}
 
 // compare path starting at the root; returns:
 // 0: paths are the same length and same names
@@ -280,25 +295,11 @@ auto SplitIntoWords(LPCTSTR szText)
 	return words;
 }
 
-void FreeDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNodes)
-{
-	// free all PDNODE in BagOValues
-	for (PDNODE p : *pNodes)
-	{
-		LocalFree(p);
-	}
-
-	// free that vector and the BagOValues itself
-	delete pNodes;
-	delete pbov;
-}
-
-BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNodes, LPCTSTR szRoot, PDNODE pNodeParent, DWORD scanEpoc)
+BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNodeParent, DWORD scanEpoc)
 {
 	LFNDTA lfndta;
 	WCHAR szPath[MAXPATHLEN];
 	LPWSTR szEndPath;
-
 	lstrcpy(szPath, szRoot);
 	if (lstrlen(szPath) + 1 >= std::size(szPath))
 	{
@@ -313,18 +314,11 @@ BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNo
 	{
 		// create first one; assume directory; "name" is full path starting with <drive>:
 		// normally name is just directory name by itself
-		pNodeParent = CreateNode(nullptr, szPath, FILE_ATTRIBUTE_DIRECTORY);
-		if (pNodeParent == nullptr)
-		{
-			// out of memory
-			return TRUE;
-		}
-
-		pNodes->push_back(pNodeParent);
-		pbov->Add(szPath, pNodeParent);
+		auto & result = result_bag.allNodes.emplace_back(nullptr, szPath, FILE_ATTRIBUTE_DIRECTORY);
+		result_bag.BagOCDrive.Add(szPath, &result);
 	}
 
-	if (lstrlen(szPath) + lstrlen(szStarDotStar) >= COUNTOF(szPath))
+	if (lstrlen(szPath) + lstrlen(szStarDotStar) >= std::size(szPath))
 	{
 		// path too long
 		return TRUE;
@@ -359,13 +353,7 @@ BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNo
 			continue;
 		}
 
-		PDNODE pNodeChild = CreateNode(pNodeParent, lfndta.fd.cFileName, lfndta.fd.dwFileAttributes);
-		if (pNodeChild == nullptr)
-		{
-			// out of memory
-			break;
-		}
-		pNodes->push_back(pNodeChild);
+		auto & childNode = result_bag.allNodes.emplace_back(pNodeParent, lfndta.fd.cFileName, lfndta.fd.dwFileAttributes);
 
 		// if spaces, each word individually (and not whole thing)
 		auto words = SplitIntoWords(lfndta.fd.cFileName);
@@ -373,7 +361,7 @@ BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNo
 		for (auto word : words)
 		{
 			// TODO: how to mark which word is primary to avoid double free?
-			pbov->Add(word, pNodeChild);
+			result_bag.BagOCDrive.Add(word, &childNode);
 		}
 
 		//
@@ -390,7 +378,7 @@ BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNo
 			return TRUE;
 		}
 		// add directories in subdir
-		if (!BuildDirectoryBagOValues(pbov, pNodes, szPath, pNodeChild, scanEpoc))
+		if (!BuildDirectoryBagOValues(result_bag, szPath, &childNode, scanEpoc))
 		{
 			WFFindClose(&lfndta);
 			return FALSE;
@@ -406,7 +394,7 @@ BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNo
 
 auto GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 {
-	if (g_pBagOCDrive == nullptr)
+	if (g_valuesBag == nullptr)
 		return std::vector<PDNODE>{};
 
 	auto words = SplitIntoWords(szText);
@@ -429,10 +417,10 @@ auto GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 			fPrefix = false;
 			word = word.substr(1);
 		}
-		auto bagOCDrive = g_pBagOCDrive.load();
+		auto& bagOCDrive = g_valuesBag.load()->BagOCDrive;
 		if (pos == std::wstring::npos)
 		{
-			options = bagOCDrive->Retrieve(word, fPrefix, 1000);
+			options = bagOCDrive.Retrieve(word, fPrefix, 1000);
 
 			if (options.size() == 1000)
 				*pbLimited = TRUE;
@@ -443,8 +431,8 @@ auto GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 			auto first = word.substr(0, pos);
 			auto second = word.substr(pos + 1);
 
-			std::vector<PDNODE> options1 = bagOCDrive->Retrieve(first, fPrefix, 1000);
-			std::vector<PDNODE> options2 = bagOCDrive->Retrieve(second, fPrefix, 1000);
+			std::vector<PDNODE> options1 = bagOCDrive.Retrieve(first, fPrefix, 1000);
+			std::vector<PDNODE> options2 = bagOCDrive.Retrieve(second, fPrefix, 1000);
 
 			if (options1.size() == 1000 ||
 				options2.size() == 1000)
@@ -652,27 +640,20 @@ GotoDirDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 	return TRUE;
 }
 
-DWORD WINAPI
-BuildDirectoryTreeBagOValues(PVOID pv)
+static DWORD
+BuildDirectoryTreeBagOValues()
 {
-	DWORD scanEpocNew = InterlockedIncrement(&g_driveScanEpoc);
+	DWORD scanEpocNew = ++g_driveScanEpoc;
 
-	BagOValues<PDNODE> *pBagNew = new BagOValues<PDNODE>();
-	std::vector<PDNODE> *pNodes = new std::vector<PDNODE>();
+	std::unique_ptr<values_bag> pBagNew = std::make_unique<values_bag>();
 
-	SendMessage(hwndStatus, SB_SETTEXT, 2, (LPARAM)TEXT("BUILDING GOTO CACHE"));
+	SendMessageW(hwndStatus, SB_SETTEXT, 2, (LPARAM)TEXT("BUILDING GOTO CACHE"));
 
-	if (BuildDirectoryBagOValues(pBagNew, pNodes, TEXT("c:\\"), nullptr, scanEpocNew))
+	if (BuildDirectoryBagOValues(*pBagNew, TEXT("c:\\"), nullptr, scanEpocNew))
 	{
-		pBagNew->Sort();
+		pBagNew->BagOCDrive.Sort();
 
-		pBagNew = g_pBagOCDrive.exchange(pBagNew);
-		pNodes = g_allNodes.exchange(pNodes);
-	}
-
-	if (pBagNew != nullptr)
-	{
-		FreeDirectoryBagOValues(pBagNew, pNodes);
+		pBagNew.reset(g_valuesBag.exchange(pBagNew.release()));
 	}
 
 	UpdateMoveStatus(ReadMoveStatus());
@@ -684,26 +665,20 @@ BuildDirectoryTreeBagOValues(PVOID pv)
 DWORD
 StartBuildingDirectoryTrie()
 {
-	HANDLE hThreadCopy;
-	DWORD dwIgnore;
 
 	//
 	// Move/Copy things.
 	//
-	hThreadCopy = CreateThread(nullptr,
-		0L,
-		BuildDirectoryTreeBagOValues,
-		nullptr,
-		0L,
-		&dwIgnore);
-
-	if (!hThreadCopy) {
-		return GetLastError();
+	try
+	{
+		std::thread thread(BuildDirectoryTreeBagOValues);
+		SetThreadPriority(thread.native_handle(), THREAD_PRIORITY_BELOW_NORMAL);
+		
+		thread.detach();
 	}
-
-	SetThreadPriority(hThreadCopy, THREAD_PRIORITY_BELOW_NORMAL);
-
-	CloseHandle(hThreadCopy);
+	catch (const std::system_error & ex) {
+		return ex.code().value();
+	}
 
 	return 0;
 }

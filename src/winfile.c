@@ -40,10 +40,10 @@ BOOL bDialogMessage(PMSG pMsg);
 extern BOOL bCompressReEntry;
 
 INT APIENTRY
-WinMain(
+wWinMain(
    HINSTANCE hInst,
    HINSTANCE hPrevInst,
-   LPSTR pszCmdLineA,
+   LPWSTR pszCmdLineW,
    INT nCmdShow)
 {
    MSG       msg;
@@ -67,7 +67,7 @@ WinMain(
 
       vWaitMessage();
 
-      while (PeekMessage(&msg, (HWND)NULL, 0, 0, PM_REMOVE)) {
+      while (PeekMessageW(&msg, (HWND)NULL, 0, 0, PM_REMOVE)) {
 
          if (msg.message == WM_QUIT) {
             FreeFileManager();
@@ -101,7 +101,7 @@ WinMain(
                                                        &msg))) {
 
                   TranslateMessage(&msg);
-                  DispatchMessage(&msg);
+                  DispatchMessageW(&msg);
                }
             }
          }
