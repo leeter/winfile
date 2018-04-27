@@ -103,7 +103,7 @@ StarFilename(LPTSTR pszPath)
 /*--------------------------------------------------------------------------*/
 
 INT_PTR
-SearchDlgProc(register HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
+SearchDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
   LPTSTR     p;
   MDICREATESTRUCT   MDICS;
@@ -273,7 +273,7 @@ INT_PTR
 RunDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
   LPTSTR p,pDir,pFile,pPar;
-  register DWORD ret;
+  DWORD ret;
   LPTSTR pDir2;
   TCHAR szTemp[MAXPATHLEN];
   TCHAR szTemp2[MAXPATHLEN];
@@ -429,7 +429,7 @@ MessWithRenameDirPath(LPTSTR pszPath)
 // calling DialogBox() to indicate which function is being used.
 
 INT_PTR
-SuperDlgProc(register HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
+SuperDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
    UINT          len;
    LPTSTR        pszFrom;
@@ -1571,7 +1571,7 @@ FullPath:
 /*--------------------------------------------------------------------------*/
 
 INT_PTR
-AttribsDlgProc(register HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
+AttribsDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
    LPTSTR p, pSel;
    BOOL bRet;

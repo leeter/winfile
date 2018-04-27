@@ -9,6 +9,11 @@
 
 ********************************************************************/
 
+#pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define CCHMAXFILE      MAXPATHLEN         // max size of a long name
 #define CCHMAXPATHCOMP  256
 #define LFNCANON_MASK           1
@@ -51,4 +56,6 @@ BOOL  LFNMergePath(LPTSTR,LPTSTR);
 
 BOOL  IsLFNSelected(VOID);
 
-
+#ifdef __cplusplus
+}
+#endif

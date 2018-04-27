@@ -37,7 +37,7 @@ DWORD cNodes;
 VOID
 GetTreePathIndirect(
     PDNODE pNode,
-    register LPTSTR szDest);
+     LPTSTR szDest);
 
 VOID
 ScanDirLevel(
@@ -114,9 +114,9 @@ ResetTreeMax(
 /*--------------------------------------------------------------------------*/
 
 VOID
-GetTreePathIndirect(PDNODE pNode, register LPTSTR szDest)
+GetTreePathIndirect(PDNODE pNode,  LPTSTR szDest)
 {
-   register PDNODE    pParent;
+    PDNODE    pParent;
 
    pParent = pNode->pParent;
 
@@ -139,7 +139,7 @@ GetTreePathIndirect(PDNODE pNode, register LPTSTR szDest)
 /*--------------------------------------------------------------------------*/
 
 VOID
-GetTreePath(PDNODE pNode, register LPTSTR szDest)
+GetTreePath(PDNODE pNode,  LPTSTR szDest)
 {
    szDest[0] = CHAR_NULL;
    GetTreePathIndirect(pNode, szDest);
@@ -1219,8 +1219,8 @@ FindItemFromPath(
    DWORD *pIndex,
    PDNODE *ppNode)
 {
-  register DWORD     i;
-  register LPTSTR    p;
+   DWORD     i;
+   LPTSTR    p;
   PDNODE             pNode;
   DWORD              iPreviousNode;
   PDNODE             pPreviousNode;
@@ -1955,7 +1955,7 @@ ExpandLevel(HWND hWnd, WPARAM wParam, INT nIndex, LPTSTR szPath)
 
 LRESULT
 TreeControlWndProc(
-   register HWND hwnd,
+    HWND hwnd,
    UINT uMsg,
    WPARAM wParam,
    LPARAM lParam)

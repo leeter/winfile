@@ -36,7 +36,7 @@ TCHAR szHelv[] = TEXT("MS Shell Dlg");
 HBITMAP hbmSave;
 
 DWORD   RGBToBGR(DWORD rgb);
-VOID    BoilThatDustSpec(register WCHAR *pStart, BOOL bLoadIt);
+VOID    BoilThatDustSpec(WCHAR *pStart, BOOL bLoadIt);
 VOID    DoRunEquals(PINT pnCmdShow);
 VOID    GetSavedWindow(LPWSTR szBuf, PWINDOW pwin);
 VOID    GetSettings(VOID);
@@ -289,7 +289,7 @@ GetInternational()
 
 
 INT
-GetDriveOffset(register DRIVE drive)
+GetDriveOffset(DRIVE drive)
 {
    if (IsRemoteDrive(drive)) {
 
@@ -458,9 +458,9 @@ InitMenus()
  */
 
 VOID
-BoilThatDustSpec(register TCHAR *pStart, BOOL bLoadIt)
+BoilThatDustSpec(TCHAR *pStart, BOOL bLoadIt)
 {
-   register TCHAR *pEnd;
+   TCHAR *pEnd;
    DWORD         ret;
    BOOL          bFinished;
 

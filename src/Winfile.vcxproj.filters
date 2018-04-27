@@ -14,7 +14,6 @@
     <ClCompile Include="wfassoc.c" />
     <ClCompile Include="wfchgnot.c" />
     <ClCompile Include="wfcomman.c" />
-    <ClCompile Include="wfcopy.c" />
     <ClCompile Include="wfdir.c" />
     <ClCompile Include="wfdirrd.c" />
     <ClCompile Include="wfdirsrc.c" />
@@ -36,6 +35,7 @@
     <ClCompile Include="wfutil.c" />
     <ClCompile Include="winfile.c" />
     <ClCompile Include="wnetcaps.c" />
+    <ClCompile Include="wfcopy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dbg.h" />

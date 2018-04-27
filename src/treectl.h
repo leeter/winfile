@@ -6,6 +6,11 @@
    Licensed under the MIT License.
 
 ********************************************************************/
+#pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 #define SHOVEIT(x)       (MAKELONG((x),0))
 
@@ -33,5 +38,9 @@ typedef struct tagDNODE
   } DNODE;
 typedef DNODE *PDNODE;
 
-VOID GetTreePath(PDNODE pNode, register LPTSTR szDest);
+VOID GetTreePath(PDNODE pNode,  LPTSTR szDest);
+
+#ifdef __cplusplus
+}
+#endif
 

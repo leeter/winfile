@@ -33,14 +33,14 @@ public:
 		m_iterations = 0;
 	}
 
-	void Lock();
-	void Unlock();
+	void lock();
+	void unlock();
 
 	inline bool HasThresholdReached() { return (m_iterations >= YIELD_ITERATION); }
 };
 
 
-void SpinLock::Lock()
+void SpinLock::lock()
 {
 	m_iterations = 0;
 	while (true)
@@ -83,7 +83,7 @@ void SpinLock::Lock()
 }
 
 
-void SpinLock::Unlock()
+void SpinLock::unlock()
 {
 	if (this->dest != GetCurrentThreadId())
 		throw std::runtime_error("Unexpected thread-id in release");

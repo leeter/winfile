@@ -416,7 +416,7 @@ FixUpFileSpec(
    LPWSTR szFileSpec)
 {
   WCHAR szTemp[MAXPATHLEN+1];
-  register LPWSTR p;
+  LPWSTR p;
 
   if (*szFileSpec == CHAR_DOT) {
     lstrcpy(szTemp, SZ_STAR);
@@ -591,7 +591,7 @@ UpdateSearchStatus(HWND hwndLB, INT nCount)
 
 LRESULT
 SearchWndProc(
-   register HWND hwnd,
+   HWND hwnd,
    UINT uMsg,
    WPARAM wParam,
    LPARAM lParam)

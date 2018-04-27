@@ -18,6 +18,7 @@
 #include <shlobj.h>
 #include <commctrl.h>
 #include <ole2.h>
+#include <PathCch.h>
 
 #ifndef HELP_PARTIALKEY
 #define HELP_PARTIALKEY 0x0105L    // call the search engine in winhelp
@@ -30,6 +31,11 @@ HWND LocateDirWindow(LPTSTR pszPath, BOOL bNoFileSpec, BOOL bNoTreeWindow);
 VOID UpdateAllDirWindows(LPTSTR pszPath, DWORD dwFunction, BOOL bNoFileSpec);
 VOID AddNetMenuItems(VOID);
 VOID InitNetMenuItems(VOID);
+
+extern VOID(*lpfnFormat)(PWSTR, FMIFS_MEDIA_TYPE, PWSTR, PWSTR, BOOLEAN, FMIFS_CALLBACK);
+extern VOID(*lpfnDiskCopy)(PWSTR, PWSTR, BOOLEAN, FMIFS_CALLBACK);
+extern BOOLEAN(*lpfnSetLabel)(PWSTR, PWSTR);
+extern BOOLEAN(*lpfnQuerySupportedMedia)(PWSTR, PFMIFS_MEDIA_TYPE, DWORD, PDWORD);
 
 INT UpdateConnectionsOnConnect(VOID);
 VOID LockFormatDisk(INT iDrive1, INT iDrive2, DWORD dwMessage, DWORD dwCommand, BOOL bLock);
@@ -105,7 +111,7 @@ LocateDirWindow(
     BOOL bNoFileSpec,
     BOOL bNoTreeWindow)
 {
-   register HWND hwndT;
+    HWND hwndT;
    HWND hwndDir;
    LPTSTR pT2;
    TCHAR szTemp[MAXPATHLEN];
@@ -173,7 +179,7 @@ UpdateAllDirWindows(
     DWORD dwFunction,
     BOOL bNoFileSpec)
 {
-   register HWND hwndT;
+    HWND hwndT;
    HWND hwndDir;
    LPTSTR pT2;
    TCHAR szTemp[MAXPATHLEN];
@@ -248,7 +254,7 @@ UpdateAllDirWindows(
 
 VOID
 ChangeFileSystem(
-   register DWORD dwFunction,
+    DWORD dwFunction,
    LPTSTR lpszFile,
    LPTSTR lpszTo)
 {
@@ -503,11 +509,11 @@ CreateTreeWindow(
 
 HWND
 CreateDirWindow(
-   register LPWSTR szPath,
+   LPWSTR szPath,
    BOOL bReplaceOpen,
    HWND hwndActive)
 {
-   register HWND hwndT;
+    HWND hwndT;
    INT dxSplit;
 
    if (hwndActive == hwndSearch) {
@@ -856,22 +862,22 @@ GetPowershellExePath(LPTSTR szPSPath)
 
 BOOL GetBashExePath(LPTSTR szBashPath, UINT bufSize)
 {
-	const TCHAR szBashFilename[] = TEXT("bash.exe");
+	const WCHAR szBashFilename[] = L"bash.exe";
 	UINT len;
 
-	len = GetSystemDirectory(szBashPath, bufSize);
-	if ((len != 0) && (len + COUNTOF(szBashFilename) + 1 < bufSize) && PathAppend(szBashPath, TEXT("bash.exe")))
+	len = GetSystemDirectoryW(szBashPath, bufSize);
+	if ((len != 0) && (len + COUNTOF(szBashFilename) + 1 < bufSize) && PathCchAppend(szBashPath, bufSize, TEXT("bash.exe")))
 	{
-		if (PathFileExists(szBashPath))
+		if (PathFileExistsW(szBashPath))
 			return TRUE;
 	}
 
 	// If we are running 32 bit Winfile on 64 bit Windows, System32 folder is redirected to SysWow64, which
 	// doesn't include bash.exe. So we also need to check Sysnative folder, which always maps to System32 folder.
-	len = ExpandEnvironmentStrings(TEXT("%SystemRoot%\\Sysnative\\bash.exe"), szBashPath, bufSize);
+	len = ExpandEnvironmentStringsW(TEXT("%SystemRoot%\\Sysnative\\bash.exe"), szBashPath, bufSize);
 	if (len != 0 && len <= bufSize)
 	{
-		return PathFileExists(szBashPath);
+		return PathFileExistsW(szBashPath);
 	}
 
 	return FALSE;
@@ -883,12 +889,12 @@ BOOL GetBashExePath(LPTSTR szBashPath, UINT bufSize)
 /*--------------------------------------------------------------------------*/
 
 BOOL
-AppCommandProc(register DWORD id)
+AppCommandProc( DWORD id)
 {
    DWORD         dwFlags;
    BOOL          bMaxed;
    HMENU         hMenu;
-   register HWND hwndActive;
+   HWND hwndActive;
    BOOL          bTemp;
    HWND          hwndT;
    TCHAR         szPath[MAXPATHLEN];
@@ -2172,8 +2178,8 @@ SwitchToSafeDrive(VOID)
 {
    WCHAR szSafePath[MAXPATHLEN];
 
-   GetSystemDirectory(szSafePath, COUNTOF(szSafePath));
-   SetCurrentDirectory(szSafePath);
+   GetSystemDirectoryW(szSafePath, COUNTOF(szSafePath));
+   SetCurrentDirectoryW(szSafePath);
 }
 
 

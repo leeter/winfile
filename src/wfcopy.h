@@ -8,6 +8,9 @@
    Licensed under the MIT License.
 
 ********************************************************************/
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define FIND_DIRS       0x0010
 
@@ -56,5 +59,9 @@ VOID AppendToPath(LPTSTR,LPCTSTR);
 UINT RemoveLast(LPTSTR pFile);
 VOID Notify(HWND,WORD,LPTSTR,LPTSTR);
 
-LPTSTR FindFileName(register LPTSTR pPath);
+LPTSTR FindFileName( LPTSTR pPath);
+
+#ifdef __cplusplus
+}
+#endif
 

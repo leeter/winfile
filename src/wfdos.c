@@ -42,6 +42,7 @@ GetDiskSpace(DRIVE drive,
    }
 }
 
+extern BOOLEAN(*lpfnSetLabel)(PWSTR, PWSTR);
 
 INT
 ChangeVolumeLabel(DRIVE drive, LPTSTR lpNewVolName)

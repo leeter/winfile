@@ -7,6 +7,7 @@
 
 ********************************************************************/
 
+#include <Windows.h>
 #include "winfile.h"
 #include "lfn.h"
 #include "wfcopy.h"
@@ -1709,7 +1710,7 @@ BOOL GetRootPath(
 //
 /////////////////////////////////////////////////////////////////////////////
 
-extern VOID GetTreePath(PDNODE pNode, register LPTSTR szDest);
+extern VOID GetTreePath(PDNODE pNode, LPTSTR szDest);
 
 VOID RedrawAllTreeWindows()
 {

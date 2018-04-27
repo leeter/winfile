@@ -11,20 +11,21 @@
 
 #include "BagOValues.h"
 #include <iterator>
+#include <atomic>
+#include <deque>
 
-extern "C"
-{
+#include <PathCch.h>
 #include "winfile.h"
 #include "treectl.h"
 #include "lfn.h"
-}
+
 
 void BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, LPTSTR szRoot, PDNODE pNode);
 void FreeDirectoryBagOValues(BagOValues<PDNODE> *pbov);
 
 DWORD g_driveScanEpoc;				// incremented when a refresh is requested; old bags are discarded; scans are aborted if epoc changes
-BagOValues<PDNODE> *g_pBagOCDrive;	// holds the values from the scan per g_driveScanEpoc
-vector<PDNODE> *g_allNodes;			// holds the nodes we created to make freeing them simpler (e.g., because some are reused)
+std::atomic<BagOValues<PDNODE> *> g_pBagOCDrive;	// holds the values from the scan per g_driveScanEpoc
+std::atomic<std::vector<PDNODE> *>g_allNodes;			// holds the nodes we created to make freeing them simpler (e.g., because some are reused)
 
 // compare path starting at the root; returns:
 // 0: paths are the same length and same names
@@ -96,9 +97,9 @@ bool CompareNodes(const PDNODE& a, const PDNODE& b)
 	return ParentOrdering(a, b) < 0;
 }
 
-vector<PDNODE> FilterBySubtree(vector<PDNODE> const& parents, vector<PDNODE>  const& children)
+std::vector<PDNODE> FilterBySubtree(std::vector<PDNODE> const& parents, std::vector<PDNODE>  const& children)
 {
-	vector<PDNODE> results;
+	std::vector<PDNODE> results;
 
 	// for each child, if parent in parents, return
 	std::copy_if(std::cbegin(children),
@@ -113,9 +114,9 @@ vector<PDNODE> FilterBySubtree(vector<PDNODE> const& parents, vector<PDNODE>  co
 	return results;
 }
 
-vector<PDNODE> TreeIntersection(vector<vector<PDNODE>>& trees)
+std::vector<PDNODE> TreeIntersection(std::vector<std::vector<PDNODE>>& trees)
 {
-	vector<PDNODE> result;
+	std::vector<PDNODE> result;
 
 	if (trees.empty())
 		return result;
@@ -127,7 +128,7 @@ vector<PDNODE> TreeIntersection(vector<vector<PDNODE>>& trees)
 	size_t maxOutput = 0;
 	for (auto& tree : trees)
 	{
-		sort(tree.begin(), tree.end(), CompareNodes);
+		std::sort(tree.begin(), tree.end(), CompareNodes);
 		if (tree.size() > maxOutput)
 			maxOutput = tree.size();
 	}
@@ -138,13 +139,13 @@ vector<PDNODE> TreeIntersection(vector<vector<PDNODE>>& trees)
 		return trees.at(0);
 
 	// use up to two outputs and switch back and forth; lastOutput is last number output 
-	vector<PDNODE> outputA(maxOutput);
-	vector<PDNODE> outputB(maxOutput);
-	vector<PDNODE> *combined = nullptr;
+	std::vector<PDNODE> outputA(maxOutput);
+	std::vector<PDNODE> outputB(maxOutput);
+	std::vector<PDNODE> *combined = nullptr;
 	size_t lastOutput = 0;
 
 	// first is left side of merge; changes each time through the loop
-	vector<PDNODE>* first = nullptr;
+	std::vector<PDNODE>* first = nullptr;
 
 	// for all other result sets, merge
 	for (int i = 1; i < count; i++)
@@ -263,14 +264,14 @@ PDNODE CreateNode(PDNODE pParentNode, WCHAR *szName, DWORD dwAttribs)
 
 #include <sstream>
 
-vector<wstring> SplitIntoWords(LPCTSTR szText)
+auto SplitIntoWords(LPCTSTR szText)
 {
-	vector<wstring> words;
+	std::vector<std::wstring> words;
 
-	wstringstream ss;
+	std::wstringstream ss;
 	ss.str(szText);
-	wstring item;
-	while (getline(ss, item, L' '))
+	std::wstring item;
+	while (std::getline(ss, item, L' '))
 	{
 		if (item.size() != 0)
 			words.push_back(item);
@@ -279,7 +280,7 @@ vector<wstring> SplitIntoWords(LPCTSTR szText)
 	return words;
 }
 
-void FreeDirectoryBagOValues(BagOValues<PDNODE> *pbov, vector<PDNODE> *pNodes)
+void FreeDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNodes)
 {
 	// free all PDNODE in BagOValues
 	for (PDNODE p : *pNodes)
@@ -292,20 +293,20 @@ void FreeDirectoryBagOValues(BagOValues<PDNODE> *pbov, vector<PDNODE> *pNodes)
 	delete pbov;
 }
 
-BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, vector<PDNODE> *pNodes, LPCTSTR szRoot, PDNODE pNodeParent, DWORD scanEpoc)
+BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNodes, LPCTSTR szRoot, PDNODE pNodeParent, DWORD scanEpoc)
 {
 	LFNDTA lfndta;
 	WCHAR szPath[MAXPATHLEN];
 	LPWSTR szEndPath;
 
 	lstrcpy(szPath, szRoot);
-	if (lstrlen(szPath) + 1 >= COUNTOF(szPath))
+	if (lstrlen(szPath) + 1 >= std::size(szPath))
 	{
 		// path too long
 		return TRUE;
 	}
 
-	AddBackslash(szPath);
+	PathCchAddBackslash(szPath, std::size(szPath));
 	szEndPath = szPath + lstrlen(szPath);
 
 	if (pNodeParent == nullptr)
@@ -367,7 +368,7 @@ BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, vector<PDNODE> *pNodes, 
 		pNodes->push_back(pNodeChild);
 
 		// if spaces, each word individually (and not whole thing)
-		vector<wstring> words = SplitIntoWords(lfndta.fd.cFileName);
+		auto words = SplitIntoWords(lfndta.fd.cFileName);
 
 		for (auto word : words)
 		{
@@ -385,9 +386,9 @@ BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, vector<PDNODE> *pNodes, 
 			return TRUE;
 		}
 
-		AddBackslash(szPath);
-		lstrcat(szPath, lfndta.fd.cFileName);         // cFileName is ANSI now
-
+		if (FAILED(PathCchAppend(szPath, std::size(szPath), lfndta.fd.cFileName))) {// cFileName is ANSI now
+			return TRUE;
+		}
 		// add directories in subdir
 		if (!BuildDirectoryBagOValues(pbov, pNodes, szPath, pNodeChild, scanEpoc))
 		{
@@ -403,24 +404,24 @@ BOOL BuildDirectoryBagOValues(BagOValues<PDNODE> *pbov, vector<PDNODE> *pNodes, 
 	return TRUE;
 }
 
-vector<PDNODE> GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
+auto GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 {
 	if (g_pBagOCDrive == nullptr)
-		return vector<PDNODE>{};
+		return std::vector<PDNODE>{};
 
-	vector<wstring> words = SplitIntoWords(szText);
+	auto words = SplitIntoWords(szText);
 
-	vector<vector<PDNODE>> options_per_word;
+	std::vector<std::vector<PDNODE>> options_per_word;
 
 	for (auto word : words)
 	{
-		vector<PDNODE> options;
+		std::vector<PDNODE> options;
 		size_t pos = word.find_first_of(L'\\');
 		if (pos == word.size() - 1)
 		{
 			// '\' at end; remove
 			word = word.substr(0, pos);
-			pos = string::npos;
+			pos = std::wstring::npos;
 		}
 		bool fPrefix = true;
 		if (word[0] == L'\'')
@@ -428,9 +429,10 @@ vector<PDNODE> GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 			fPrefix = false;
 			word = word.substr(1);
 		}
-		if (pos == string::npos)
+		auto bagOCDrive = g_pBagOCDrive.load();
+		if (pos == std::wstring::npos)
 		{
-			options = g_pBagOCDrive->Retrieve(word, fPrefix, 1000);
+			options = bagOCDrive->Retrieve(word, fPrefix, 1000);
 
 			if (options.size() == 1000)
 				*pbLimited = TRUE;
@@ -438,11 +440,11 @@ vector<PDNODE> GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 		else
 		{
 			// "foo\bar" -> find candidates foo* which have subdir bar*
-			wstring first = word.substr(0, pos);
-			wstring second = word.substr(pos + 1);
+			auto first = word.substr(0, pos);
+			auto second = word.substr(pos + 1);
 
-			vector<PDNODE> options1 = std::move(g_pBagOCDrive->Retrieve(first, fPrefix, 1000));
-			vector<PDNODE> options2 = std::move(g_pBagOCDrive->Retrieve(second, fPrefix, 1000));
+			std::vector<PDNODE> options1 = bagOCDrive->Retrieve(first, fPrefix, 1000);
+			std::vector<PDNODE> options2 = bagOCDrive->Retrieve(second, fPrefix, 1000);
 
 			if (options1.size() == 1000 ||
 				options2.size() == 1000)
@@ -454,7 +456,7 @@ vector<PDNODE> GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 		options_per_word.emplace_back(std::move(options));
 	}
 
-	vector<PDNODE> final_options = std::move(TreeIntersection(options_per_word));
+	std::vector<PDNODE> final_options = TreeIntersection(options_per_word);
 
 	return final_options;
 }
@@ -466,10 +468,10 @@ VOID UpdateGotoList(HWND hDlg)
 
 	DWORD dw = GetDlgItemText(hDlg, IDD_GOTODIR, szText, COUNTOF(szText));
 
-	vector<PDNODE> options = GetDirectoryOptionsFromText(szText, &bLimited);
+	const auto options = GetDirectoryOptionsFromText(szText, &bLimited);
 
 	HWND hwndLB = GetDlgItem(hDlg, IDD_GOTOLIST);
-	SendMessage(hwndLB, LB_RESETCONTENT, 0, 0);
+	SendMessageW(hwndLB, LB_RESETCONTENT, 0, 0);
 
 	if (options.empty())
 		return;
@@ -478,19 +480,19 @@ VOID UpdateGotoList(HWND hDlg)
 	{
 		GetTreePath(options.at(i), szText);
 
-		SendMessage(hwndLB, LB_ADDSTRING, 0, (LPARAM)szText);
+		SendMessageW(hwndLB, LB_ADDSTRING, 0, (LPARAM)szText);
 	}
 
 	if (bLimited)
 	{
-		SendMessage(hwndLB, LB_ADDSTRING, 0, (LPARAM)TEXT("... limited ..."));
+		SendMessageW(hwndLB, LB_ADDSTRING, 0, (LPARAM)TEXT("... limited ..."));
 	}
 	else if (options.size() >= 10)
 	{
-		SendMessage(hwndLB, LB_ADDSTRING, 0, (LPARAM)TEXT("... more ..."));
+		SendMessageW(hwndLB, LB_ADDSTRING, 0, (LPARAM)TEXT("... more ..."));
 	}
 
-	SendMessage(hwndLB, LB_SETCURSEL, 0, 0);
+	SendMessageW(hwndLB, LB_SETCURSEL, 0, 0);
 }
 
 /*--------------------------------------------------------------------------*/
@@ -656,7 +658,7 @@ BuildDirectoryTreeBagOValues(PVOID pv)
 	DWORD scanEpocNew = InterlockedIncrement(&g_driveScanEpoc);
 
 	BagOValues<PDNODE> *pBagNew = new BagOValues<PDNODE>();
-	vector<PDNODE> *pNodes = new vector<PDNODE>();
+	std::vector<PDNODE> *pNodes = new std::vector<PDNODE>();
 
 	SendMessage(hwndStatus, SB_SETTEXT, 2, (LPARAM)TEXT("BUILDING GOTO CACHE"));
 
@@ -664,8 +666,8 @@ BuildDirectoryTreeBagOValues(PVOID pv)
 	{
 		pBagNew->Sort();
 
-		pBagNew = (BagOValues<PDNODE> *)InterlockedExchangePointer((PVOID *)&g_pBagOCDrive, pBagNew);
-		pNodes = (vector<PDNODE> *)InterlockedExchangePointer((PVOID *)&g_allNodes, pNodes);
+		pBagNew = g_pBagOCDrive.exchange(pBagNew);
+		pNodes = g_allNodes.exchange(pNodes);
 	}
 
 	if (pBagNew != nullptr)

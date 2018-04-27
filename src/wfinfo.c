@@ -789,7 +789,7 @@ DocOpenEnum(PPDOCBUCKET ppDocBucket)
 /////////////////////////////////////////////////////////////////////
 
 LPTSTR
-DocEnum(register PDOCENUM pDocEnum, PHICON phIcon)
+DocEnum(PDOCENUM pDocEnum, PHICON phIcon)
 {
    LPTSTR pszExt;
 
@@ -1385,7 +1385,7 @@ EnumRetry:
 DWORD
 WFGetConnection(DRIVE drive, LPTSTR* ppPath, BOOL bConvertClosed, DWORD dwType)
 {
-   register DWORD dwRetVal;
+   DWORD dwRetVal;
    BOOL bConverted = FALSE;
 
    //

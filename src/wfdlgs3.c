@@ -17,6 +17,11 @@
 #define LABEL_FAT_MAX  11
 #define CCH_VERSION    40
 
+VOID(*lpfnFormat)(PWSTR, FMIFS_MEDIA_TYPE, PWSTR, PWSTR, BOOLEAN, FMIFS_CALLBACK);
+VOID(*lpfnDiskCopy)(PWSTR, PWSTR, BOOLEAN, FMIFS_CALLBACK);
+BOOLEAN(*lpfnSetLabel)(PWSTR, PWSTR);
+BOOLEAN(*lpfnQuerySupportedMedia)(PWSTR, PFMIFS_MEDIA_TYPE, DWORD, PDWORD);
+
 VOID FormatDrive( IN PVOID ThreadParameter );
 VOID CopyDiskette( IN PVOID ThreadParameter );
 VOID SwitchToSafeDrive(VOID);
@@ -44,7 +49,7 @@ typedef enum {
 /*--------------------------------------------------------------------------*/
 
 INT_PTR
-ChooseDriveDlgProc(register HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
+ChooseDriveDlgProc( HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
    TCHAR szDrive[5];
 
@@ -152,7 +157,7 @@ DoHelp:
 /*--------------------------------------------------------------------------*/
 
 INT_PTR
-DiskLabelDlgProc(register HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
+DiskLabelDlgProc( HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
    TCHAR szNewVol[MAXPATHLEN];
    LPTSTR lpszVol;
@@ -507,7 +512,7 @@ FillDriveCapacity(HWND hDlg, INT nDrive, FMIFS_MEDIA_TYPE fmSelect, BOOL fDoPopu
 /*--------------------------------------------------------------------------*/
 
 INT_PTR
-FormatDlgProc(register HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
+FormatDlgProc( HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
    TCHAR szBuf[128];
    INT  i, count;
@@ -734,7 +739,7 @@ DoHelp:
 /*--------------------------------------------------------------------------*/
 
 INT_PTR
-AboutDlgProc(register HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
+AboutDlgProc( HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
     WORD wMajorVersion   = 0;
     WORD wMinorVersion   = 0;
@@ -1203,7 +1208,7 @@ CancelDlgProc(HWND hDlg,
 /////////////////////////////////////////////////////////////////////
 
 INT_PTR
-ProgressDlgProc(register HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
+ProgressDlgProc( HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 {
    static PCOPYINFO pCopyInfo;
    TCHAR szTitle[MAXTITLELEN];

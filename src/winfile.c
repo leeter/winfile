@@ -787,7 +787,7 @@ FrameWndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 
 				 SendMessage(hwndStatus, SB_SETPARTS, 3, (LPARAM)(LPINT)nParts);
 
-				 SendMessage(hwndStatus, WM_SETFONT, (WPARAM)hFontStatus, 0L);
+				 SendMessageW(hwndStatus, WM_SETFONT, (WPARAM)hFontStatus, 0L);
 			 }
 			 else
 			 {
@@ -795,7 +795,7 @@ FrameWndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
 				 nParts[1] = nParts[0] + nInch * 5 / 2 + nInch * 7 / 8;
 				 nParts[2] = -1;
 
-				 SendMessage(hwndStatus, SB_SETPARTS, 3, (LPARAM)(LPINT)nParts);
+				 SendMessageW(hwndStatus, SB_SETPARTS, 3, (LPARAM)(LPINT)nParts);
 			 }
 		 }
          break;
@@ -808,7 +808,7 @@ FrameWndProc(HWND hwnd, UINT wMsg, WPARAM wParam, LPARAM lParam)
          INT       index;
          BOOL      bMaxed;
 
-         hwndActive = (HWND)SendMessage(hwndMDIClient, WM_MDIGETACTIVE, 0, 0L);
+         hwndActive = (HWND)SendMessageW(hwndMDIClient, WM_MDIGETACTIVE, 0, 0L);
          if (hwndActive && GetWindowLongPtr(hwndActive, GWL_STYLE) & WS_MAXIMIZE)
             bMaxed = 1;
          else

@@ -7,7 +7,10 @@
 
 ********************************************************************/
 
-#include "windows.h"
+#include <windows.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define DE_BIT              29              // bit for app errors
 #define DE_BEGIN            (1 << DE_BIT)   // beginning of DE_*
@@ -45,3 +48,6 @@ PDWORD FormatSuggest(DWORD dwError);
 #define DE_UPDATING         (DE_BEGIN+16)
 #define DE_DELEXTWRONGMODE  (DE_BEGIN+17)
 #define DE_REGNAME          (DE_BEGIN+18)
+#ifdef __cplusplus
+}
+#endif
