@@ -33,8 +33,17 @@ namespace {
 	};
 	std::atomic_uint32_t g_driveScanEpoc;				// incremented when a refresh is requested; old bags are discarded; scans are aborted if epoc changes		
 	struct values_bag {
-		std::deque<dnode> allNodes; // holds the values from the scan per g_driveScanEpoc
+		std::deque<PDNODE> allNodes; // holds the values from the scan per g_driveScanEpoc
 		BagOValues<PDNODE> BagOCDrive; // holds the nodes we created to make freeing them simpler (e.g., because some are reused)
+
+		~values_bag()
+		{
+			// free all PDNODE in BagOValues
+			for (PDNODE p : allNodes)
+			{
+				LocalFree(p);
+			}
+		}
 	};
 
 	std::atomic<values_bag*> g_valuesBag;
@@ -251,7 +260,7 @@ std::vector<PDNODE> TreeIntersection(std::vector<std::vector<PDNODE>>& trees)
 PDNODE CreateNode(PDNODE pParentNode, WCHAR *szName, DWORD dwAttribs)
 {
 	PDNODE pNode;
-	DWORD len = lstrlen(szName);
+	DWORD len = wcslen(szName);
 
 	pNode = (PDNODE)LocalAlloc(LPTR, sizeof(DNODE) + ByteCountOf(len));
 	if (!pNode)
@@ -295,6 +304,15 @@ auto SplitIntoWords(LPCTSTR szText)
 	return words;
 }
 
+void FreeDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNodes)
+{
+	
+
+	// free that vector and the BagOValues itself
+	delete pNodes;
+	delete pbov;
+}
+
 BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNodeParent, DWORD scanEpoc)
 {
 	LFNDTA lfndta;
@@ -314,8 +332,15 @@ BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNo
 	{
 		// create first one; assume directory; "name" is full path starting with <drive>:
 		// normally name is just directory name by itself
-		auto & result = result_bag.allNodes.emplace_back(nullptr, szPath, FILE_ATTRIBUTE_DIRECTORY);
-		result_bag.BagOCDrive.Add(szPath, &result);
+		pNodeParent = CreateNode(nullptr, szPath, FILE_ATTRIBUTE_DIRECTORY);
+		if (pNodeParent == nullptr)
+		{
+			// out of memory
+			return TRUE;
+		}
+
+		result_bag.allNodes.push_back(pNodeParent);
+		result_bag.BagOCDrive.Add(szPath, pNodeParent);
 	}
 
 	if (lstrlen(szPath) + lstrlen(szStarDotStar) >= std::size(szPath))
@@ -353,7 +378,13 @@ BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNo
 			continue;
 		}
 
-		auto & childNode = result_bag.allNodes.emplace_back(pNodeParent, lfndta.fd.cFileName, lfndta.fd.dwFileAttributes);
+		PDNODE pNodeChild = CreateNode(pNodeParent, lfndta.fd.cFileName, lfndta.fd.dwFileAttributes);
+		if (pNodeChild == nullptr)
+		{
+			// out of memory
+			break;
+		}
+		result_bag.allNodes.push_back(pNodeChild);
 
 		// if spaces, each word individually (and not whole thing)
 		auto words = SplitIntoWords(lfndta.fd.cFileName);
@@ -361,7 +392,7 @@ BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNo
 		for (auto word : words)
 		{
 			// TODO: how to mark which word is primary to avoid double free?
-			result_bag.BagOCDrive.Add(word, &childNode);
+			result_bag.BagOCDrive.Add(word, pNodeChild);
 		}
 
 		//
@@ -378,7 +409,7 @@ BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNo
 			return TRUE;
 		}
 		// add directories in subdir
-		if (!BuildDirectoryBagOValues(result_bag, szPath, &childNode, scanEpoc))
+		if (!BuildDirectoryBagOValues(result_bag, szPath, pNodeChild, scanEpoc))
 		{
 			WFFindClose(&lfndta);
 			return FALSE;

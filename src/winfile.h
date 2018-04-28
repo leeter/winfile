@@ -1276,7 +1276,7 @@ Extern HFONT hFontStatus;
 
 Extern HANDLE hfmifsDll EQ( NULL );
 
-Extern HANDLE  hAccel            EQ( NULL );
+Extern HACCEL  hAccel            EQ( NULL );
 Extern HINSTANCE  hAppInstance;
 Extern HANDLE  hModUndelete      EQ( NULL );
 

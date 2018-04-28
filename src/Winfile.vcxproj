@@ -288,7 +288,7 @@
     <ClCompile Include="wfdlgs3.c" />
     <ClCompile Include="wfdos.c" />
     <ClCompile Include="wfdrives.c" />
-    <ClCompile Include="wfdrop.c" />
+    <ClCompile Include="wfdrop.cpp" />
     <ClCompile Include="wfext.c" />
     <ClCompile Include="wffile.c" />
     <ClCompile Include="wfgoto.cpp" />

@@ -10,7 +10,6 @@
     <ClCompile Include="numfmt.c" />
     <ClCompile Include="suggest.c" />
     <ClCompile Include="tbar.c" />
-    <ClCompile Include="treectl.c" />
     <ClCompile Include="wfassoc.c" />
     <ClCompile Include="wfchgnot.c" />
     <ClCompile Include="wfcomman.c" />
@@ -22,7 +21,6 @@
     <ClCompile Include="wfdlgs3.c" />
     <ClCompile Include="wfdos.c" />
     <ClCompile Include="wfdrives.c" />
-    <ClCompile Include="wfdrop.c" />
     <ClCompile Include="wfext.c" />
     <ClCompile Include="wffile.c" />
     <ClCompile Include="wfgoto.cpp" />
@@ -36,6 +34,8 @@
     <ClCompile Include="winfile.c" />
     <ClCompile Include="wnetcaps.c" />
     <ClCompile Include="wfcopy.cpp" />
+    <ClCompile Include="treectl.c" />
+    <ClCompile Include="wfdrop.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dbg.h" />

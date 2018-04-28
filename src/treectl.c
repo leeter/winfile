@@ -2276,7 +2276,7 @@ TreeControlWndProc(
       SetWindowLongPtr(hwnd, GWL_READLEVEL, 0);
 
         {
-      WF_IDropTarget *pDropTarget;
+      IDropTarget *pDropTarget;
       
       RegisterDropWindow(hwnd, &pDropTarget);
       SetWindowLongPtr(hwnd, GWL_OLEDROP, (LPARAM)pDropTarget);
