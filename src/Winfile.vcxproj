@@ -110,7 +110,6 @@
       <ConformanceMode>true</ConformanceMode>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_X86_;_M_IX86;WIN32;_WIN32;_DEBUG;_WINDOWS;LFN;STRICT;FASTMOVE;LFNCLIPBOARD;W3;UNICODE;_UNICODE;USELASTDOT;MEMDOUBLE;WINVER=0x0601;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -143,7 +142,6 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <StringPooling>true</StringPooling>
-      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_X86_;_M_IX86;WIN32;_WIN32;_DEBUG;_WINDOWS;LFN;STRICT;FASTMOVE;LFNCLIPBOARD;W3;UNICODE;_UNICODE;USELASTDOT;MEMDOUBLE;WINVER=0x0400;_WIN32_WINNT=0x601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -182,7 +180,6 @@
       <ConformanceMode>true</ConformanceMode>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_X64_;_M_IX64;WIN64;_WIN64;_DEBUG;_WINDOWS;LFN;STRICT;FASTMOVE;LFNCLIPBOARD;W3;UNICODE;_UNICODE;USELASTDOT;MEMDOUBLE;WINVER=0x0601;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -215,7 +212,6 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <StringPooling>true</StringPooling>
-      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_X64_;_M_IX64;WIN64;_WIN64;_DEBUG;_WINDOWS;LFN;STRICT;FASTMOVE;LFNCLIPBOARD;W3;UNICODE;_UNICODE;USELASTDOT;MEMDOUBLE;WINVER=0x0601;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -233,6 +229,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="com_utils.hpp" />
     <ClInclude Include="dbg.h" />
     <ClInclude Include="fmifs.h" />
     <ClInclude Include="lfn.h" />

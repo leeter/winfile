@@ -17,6 +17,7 @@
 
 #include <ole2.h>
 #include <shlobj.h>
+#include <PathCch.h>
 
 typedef VOID (APIENTRY *FNPENAPP)(WORD, BOOL);
 
@@ -324,11 +325,11 @@ InitMenus()
 {
    HMENU hMenu;
    INT iMax;
-   TCHAR szValue[MAXPATHLEN];
+   WCHAR szValue[MAXPATHLEN];
    HWND hwndActive;
    HMENU hMenuOptions;
 
-   TCHAR szPathName[MAXPATHLEN];
+   WCHAR szPathName[MAXPATHLEN];
 
    hwndActive = (HWND)SendMessage(hwndMDIClient, WM_MDIGETACTIVE, 0, 0L);
    if (hwndActive && GetWindowLongPtr(hwndActive, GWL_STYLE) & WS_MAXIMIZE)
@@ -336,15 +337,14 @@ InitMenus()
    else
       iMax = 0;
 
-   GetPrivateProfileString(szSettings, szUndelete, szNULL, szValue, COUNTOF(szValue), szTheINIFile);
+   GetPrivateProfileStringW(szSettings, szUndelete, szNULL, szValue, COUNTOF(szValue), szTheINIFile);
 
    if (szValue[0]) {
 
       // create explicit filename to avoid searching the path
 
-      GetSystemDirectory(szPathName, COUNTOF(szPathName));
-      AddBackslash(szPathName);
-      lstrcat(szPathName, szValue);
+      GetSystemDirectoryW(szPathName, COUNTOF(szPathName));
+	  PathCchAppend(szPathName, COUNTOF(szPathName), szValue);
 
       hModUndelete = LoadLibrary(szValue);
 

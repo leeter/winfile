@@ -575,7 +575,7 @@ LRESULT DirListBoxWndProc(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam);
 
 BOOL Callback_Function(FMIFS_PACKET_TYPE PacketType, DWORD PacketLength, PVOID PacketData);
 
-BOOL CancelDlgProc  (HWND, UINT, WPARAM, LPARAM);
+INT_PTR CancelDlgProc  (HWND, UINT, WPARAM, LPARAM);
 INT_PTR  DrivesDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR  AssociateDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR  SearchDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam);

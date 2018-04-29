@@ -981,7 +981,7 @@ ChangeDisplay(
    WORD *pwTabs;
    BOOL bDontSteal = FALSE;
    HWND hwndListParms;
-   LPXDTALINK lpStart;
+   LPXDTALINK lpStart = NULL;
    BOOL bDirFocus;
    BOOL bResetFocus= FALSE;
 

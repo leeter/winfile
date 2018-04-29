@@ -9,12 +9,14 @@
 
 ********************************************************************/
 
+#include <iterator>
 #include <wrl/client.h>
 #include "winfile.h"
 #include "lfn.h"
 #include "wfcopy.h"
 #include "wnetcaps.h"              // WNetGetCaps()
 #include "wfdrop.h"
+#include "com_utils.hpp"
 
 #include <shlobj.h>
 #include <commctrl.h>
@@ -1157,24 +1159,22 @@ AppCommandProc( DWORD id)
 	  FORMATETC fmtetcDrop = { 0, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 	  UINT uFormatEffect = RegisterClipboardFormat(CFSTR_PREFERREDDROPEFFECT);
 	  FORMATETC fmtetcEffect = { uFormatEffect, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
-	  STGMEDIUM stgmed;
 	  DWORD dwEffect = DROPEFFECT_COPY;
 	  LPWSTR szFiles = NULL;
 	  
 	  wrl::ComPtr<IDataObject> pDataObj;
 	  OleGetClipboard(pDataObj.GetAddressOf());		// pDataObj == NULL if error
 
-	  if(pDataObj != NULL && pDataObj->GetData(&fmtetcEffect, &stgmed) == S_OK)
+	  if (com_utils::stg_medium stgmed; pDataObj && pDataObj->GetData(&fmtetcEffect, stgmed.GetAddressOf()) == S_OK)
 	  {
 		LPDWORD lpEffect = static_cast<LPDWORD>(GlobalLock(stgmed.hGlobal));
 		if(*lpEffect & DROPEFFECT_COPY) dwEffect = DROPEFFECT_COPY;
 		if(*lpEffect & DROPEFFECT_MOVE) dwEffect = DROPEFFECT_MOVE;
 		GlobalUnlock(stgmed.hGlobal);
-		ReleaseStgMedium(&stgmed);
 	  }
 	  
 	  // Try CF_HDROP
-	  if(pDataObj != NULL)
+	  if(pDataObj)
 		szFiles = QuotedDropList(pDataObj.Get());
 
 	  // Try CFSTR_FILEDESCRIPTOR
@@ -1186,32 +1186,28 @@ AppCommandProc( DWORD id)
 				dwEffect = DROPEFFECT_MOVE;
 	  }
 
-	  // Try "LongFileNameW"
-	  fmtetcDrop.cfFormat = RegisterClipboardFormat(TEXT("LongFileNameW"));
-	  if(szFiles == NULL && pDataObj != NULL && pDataObj->GetData(&fmtetcDrop, &stgmed) == S_OK)
-	  {
-		LPWSTR lpFile = static_cast<LPWSTR>(GlobalLock(stgmed.hGlobal));
-		DWORD cchFile = wcslen(lpFile);
-		szFiles = (LPWSTR)LocalAlloc(LMEM_FIXED, (cchFile+3) * sizeof(WCHAR));
-		lstrcpy (szFiles+1, lpFile);
-		*szFiles = '\"';
-		*(szFiles+1+cchFile) = '\"';
-		*(szFiles+1+cchFile+1) = '\0';		
+			// Try "LongFileNameW"
+			fmtetcDrop.cfFormat = RegisterClipboardFormat(TEXT("LongFileNameW"));
+			if(com_utils::stg_medium stgmed; szFiles == NULL && pDataObj && pDataObj->GetData(&fmtetcDrop, stgmed.GetAddressOf()) == S_OK)
+			{
+				LPWSTR lpFile = static_cast<LPWSTR>(GlobalLock(stgmed.hGlobal));
+				DWORD cchFile = wcslen(lpFile);
+				szFiles = (LPWSTR)LocalAlloc(LMEM_FIXED, (cchFile+3) * sizeof(WCHAR));
+				lstrcpy (szFiles+1, lpFile);
+				*szFiles = '\"';
+				*(szFiles+1+cchFile) = '\"';
+				*(szFiles+1+cchFile+1) = '\0';		
 
-		GlobalUnlock(stgmed.hGlobal);
-		
-		// release the data using the COM API
-		ReleaseStgMedium(&stgmed);
-	  }
+				GlobalUnlock(stgmed.hGlobal);
+			}
 
 		  if (szFiles != NULL)
 		  {
 			WCHAR     szTemp[MAXPATHLEN];
 
-			SendMessage(hwndActive, FS_GETDIRECTORY, COUNTOF(szTemp), (LPARAM)szTemp);
+			SendMessageW(hwndActive, FS_GETDIRECTORY, std::size(szTemp), (LPARAM)szTemp);
 
-			AddBackslash(szTemp);
-			lstrcat(szTemp, szStarDotStar);   // put files in this dir
+			PathCchAppend(szTemp, std::size(szTemp), szStarDotStar);   // put files in this dir
 
 			CheckEsc(szTemp);
 
@@ -1353,24 +1349,23 @@ AppCommandProc( DWORD id)
 
 		 if (count == 1)
 		 {
-			 SHELLEXECUTEINFO sei;
+			 SHELLEXECUTEINFOW sei = {};
 
-			 memset(&sei, 0, sizeof(sei));
 			 sei.cbSize = sizeof(sei);
 			 sei.fMask = SEE_MASK_INVOKEIDLIST;
 			 sei.hwnd = hwndActive;
-			 sei.lpVerb = TEXT("properties");
+			 sei.lpVerb = L"properties";
 			 sei.lpFile = szTemp;
 
 			 if (!bDir)
 			 {
-				SendMessage(hwndActive, FS_GETDIRECTORY, COUNTOF(szPath), (LPARAM)szPath);
-				StripBackslash(szPath);
+				SendMessage(hwndActive, FS_GETDIRECTORY, std::size(szPath), (LPARAM)szPath);
+				PathCchRemoveBackslash(szPath, std::size(szPath));
 
 				sei.lpDirectory = szPath;
 			 }
 
-			 ShellExecuteEx(&sei);
+			 ShellExecuteExW(&sei);
 		 }
 		 else if (count > 1)
 			DialogBox(hAppInstance, (LPTSTR) MAKEINTRESOURCE(MULTIPLEATTRIBSDLG), hwndFrame, (DLGPROC) AttribsDlgProc);
@@ -1405,7 +1400,7 @@ AppCommandProc( DWORD id)
 
 		 dwAttr = (id == IDM_COMPRESS) ? ATTR_COMPRESSED : 0x0000;
 
-		 SendMessage(hwndFrame, FS_DISABLEFSC, 0, 0L);
+		 SendMessageW(hwndFrame, FS_DISABLEFSC, 0, 0L);
 
 		 while (p = GetNextFile(p, szPath, COUNTOF(szPath)))
 		 {
@@ -1426,7 +1421,7 @@ AppCommandProc( DWORD id)
 			wfYield();
 		 }
 
-		 SendMessage(hwndFrame, FS_ENABLEFSC, 0, 0L);
+		 SendMessageW(hwndFrame, FS_ENABLEFSC, 0, 0L);
 
 		 LocalFree((HANDLE)pSel);
 
@@ -1434,7 +1429,7 @@ AppCommandProc( DWORD id)
 	  }
 
    case IDM_MAKEDIR:
-	  DialogBox(hAppInstance, (LPTSTR) MAKEINTRESOURCE(MAKEDIRDLG), hwndFrame, (DLGPROC)MakeDirDlgProc);
+	  DialogBoxW(hAppInstance, (LPTSTR) MAKEINTRESOURCE(MAKEDIRDLG), hwndFrame, MakeDirDlgProc);
 	  break;
 
    case IDM_SELALL:
@@ -1458,12 +1453,12 @@ AppCommandProc( DWORD id)
 
 	  SendMessage(hwndLB, WM_SETREDRAW, FALSE, 0L);
 
-	  iSave = (INT)SendMessage(hwndLB, LB_GETCURSEL, 0, 0L);
-	  SendMessage(hwndLB, LB_SETSEL, (id == IDM_SELALL), -1L);
+	  iSave = (INT)SendMessageW(hwndLB, LB_GETCURSEL, 0, 0L);
+	  SendMessageW(hwndLB, LB_SETSEL, (id == IDM_SELALL), -1L);
 
 	  if (id == IDM_DESELALL) {
 
-		 SendMessage(hwndLB, LB_SETSEL, TRUE, (LONG)iSave);
+		 SendMessageW(hwndLB, LB_SETSEL, TRUE, (LPARAM)iSave);
 
 	  } else if (hwndActive != hwndSearch) {
 
@@ -1477,16 +1472,16 @@ AppCommandProc( DWORD id)
 			lpxdta = MemLinkToHead(lpStart)->alpxdtaSorted[0];
 
 			if (lpxdta->dwAttrs & ATTR_PARENT)
-			   SendMessage(hwndLB, LB_SETSEL, 0, 0L);
+			   SendMessageW(hwndLB, LB_SETSEL, 0, 0L);
 		 }
 	  }
-	  SendMessage(hwndLB, WM_SETREDRAW, TRUE, 0L);
+	  SendMessageW(hwndLB, WM_SETREDRAW, TRUE, 0L);
 	  InvalidateRect(hwndLB, NULL, FALSE);
 
 	  //
 	  // Emulate a SELCHANGE notification.
 	  //
-	  SendMessage(hwndDir,
+	  SendMessageW(hwndDir,
 				  WM_COMMAND,
 				  GET_WM_COMMAND_MPS(0, hwndLB, LBN_SELCHANGE));
 
@@ -1565,7 +1560,7 @@ AppCommandProc( DWORD id)
 	  if (!FmifsLoaded())
 		 break;
 
-	  DialogBox(hAppInstance, (LPTSTR) MAKEINTRESOURCE(DISKLABELDLG), hwndFrame, (DLGPROC)DiskLabelDlgProc);
+	  DialogBox(hAppInstance, (LPTSTR) MAKEINTRESOURCE(DISKLABELDLG), hwndFrame, DiskLabelDlgProc);
 	  break;
 
    case IDM_DISKCOPY:
@@ -1581,7 +1576,7 @@ AppCommandProc( DWORD id)
 		 // Just create old dialog
 		 //
 
-		 CreateDialog(hAppInstance, (LPTSTR) MAKEINTRESOURCE(CANCELDLG), hwndFrame, (DLGPROC) CancelDlgProc);
+		 CreateDialogW(hAppInstance, (LPTSTR) MAKEINTRESOURCE(CANCELDLG), hwndFrame, CancelDlgProc);
 
 		 break;
 	  }
@@ -1621,19 +1616,19 @@ AppCommandProc( DWORD id)
 			CancelInfo.Info.Copy.iDestDrive = i;
 
 		 if (bConfirmFormat) {
-			LoadString(hAppInstance, IDS_DISKCOPYCONFIRMTITLE, szTitle, COUNTOF(szTitle));
-			LoadString(hAppInstance, IDS_DISKCOPYCONFIRM, szMessage, COUNTOF(szMessage));
-			if (MessageBox(hwndFrame, szMessage, szTitle, MB_ICONEXCLAMATION | MB_YESNO | MB_DEFBUTTON1) != IDYES)
+			LoadStringW(hAppInstance, IDS_DISKCOPYCONFIRMTITLE, szTitle, std::size(szTitle));
+			LoadStringW(hAppInstance, IDS_DISKCOPYCONFIRM, szMessage, std::size(szMessage));
+			if (MessageBoxW(hwndFrame, szMessage, szTitle, MB_ICONEXCLAMATION | MB_YESNO | MB_DEFBUTTON1) != IDYES)
 			   break;
 		 }
 
 		 LockFormatDisk(i,i,IDS_DRIVEBUSY_COPY, IDM_FORMAT, TRUE);
 
-		 CreateDialog(hAppInstance, (LPTSTR) MAKEINTRESOURCE(CANCELDLG), hwndFrame, (DLGPROC) CancelDlgProc);
+		 CreateDialogW(hAppInstance, (LPTSTR) MAKEINTRESOURCE(CANCELDLG), hwndFrame,  CancelDlgProc);
 
 	  } else {
 		 dwSuperDlgMode = id;
-		 ret = DialogBox(hAppInstance, MAKEINTRESOURCE(CHOOSEDRIVEDLG), hwndFrame, (DLGPROC)ChooseDriveDlgProc);
+		 ret = DialogBoxW(hAppInstance, MAKEINTRESOURCE(CHOOSEDRIVEDLG), hwndFrame, ChooseDriveDlgProc);
 	  }
 
 	  break;
@@ -1651,7 +1646,7 @@ AppCommandProc( DWORD id)
 		 // Just create old dialog
 		 //
 
-		 CreateDialog(hAppInstance, (LPTSTR) MAKEINTRESOURCE(CANCELDLG), hwndFrame, (DLGPROC) CancelDlgProc);
+		 CreateDialogW(hAppInstance, (LPTSTR) MAKEINTRESOURCE(CANCELDLG), hwndFrame, CancelDlgProc);
 
 		 return TRUE;
 	  }
@@ -2328,13 +2323,12 @@ ReadMoveStatus()
 
 	OleGetClipboard(&pDataObj);		// pDataObj == NULL if error
 
-	if (pDataObj != NULL && pDataObj->GetData(&fmtetcEffect, &stgmed) == S_OK)
+	if (com_utils::stg_medium stgmed; pDataObj && pDataObj->GetData(&fmtetcEffect, stgmed.GetAddressOf()) == S_OK)
 	{
 		LPDWORD lpEffect = static_cast<LPDWORD>(GlobalLock(stgmed.hGlobal));
 		if (*lpEffect & DROPEFFECT_COPY) dwEffect = DROPEFFECT_COPY;
 		if (*lpEffect & DROPEFFECT_MOVE) dwEffect = DROPEFFECT_MOVE;
 		GlobalUnlock(stgmed.hGlobal);
-		ReleaseStgMedium(&stgmed);
 	}
 
 	return dwEffect;

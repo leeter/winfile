@@ -53,13 +53,14 @@ wWinMain(
    HeapCheckInit();
 #endif
    pszCmdLine = GetCommandLine();
-
+   CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 #if defined(JAPAN) && defined(i386)
    RegGetMachineIdentifierValue( &gdwMachineId );
 #endif // defined(JAPAN) && defined(i386)
 
    if (!InitFileManager(hInst, pszNextComponent(pszCmdLine), nCmdShow)) {
       FreeFileManager();
+	  CoUninitialize();
       return FALSE;
    }
 
@@ -76,7 +77,7 @@ wWinMain(
             HeapCheckDump(0);
             HeapCheckDestroy();
 #endif
-
+			CoUninitialize();
             return (INT)msg.wParam;
          }
 

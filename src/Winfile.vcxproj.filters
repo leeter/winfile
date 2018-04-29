@@ -60,6 +60,9 @@
     <ClInclude Include="winexp.h" />
     <ClInclude Include="winfile.h" />
     <ClInclude Include="wnetcaps.h" />
+    <ClInclude Include="com_utils.hpp">
+      <Filter>helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res.rc" />
@@ -87,6 +90,9 @@
   <ItemGroup>
     <Filter Include="lang">
       <UniqueIdentifier>{a74d83f3-58ec-46d3-bb3d-fadca6ac5743}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="helpers">
+      <UniqueIdentifier>{5ca8b375-affc-4315-86c0-6baf25807141}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

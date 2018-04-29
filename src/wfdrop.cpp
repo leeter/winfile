@@ -20,6 +20,7 @@
 #include <wrl/wrappers/corewrappers.h>
 
 #include <strsafe.h>
+#include "com_utils.hpp"
 #ifndef GUID_DEFINED
 DEFINE_OLEGUID(IID_IUnknown,            0x00000000L, 0, 0);
 DEFINE_OLEGUID(IID_IDropSource,             0x00000121, 0, 0);
@@ -35,9 +36,8 @@ LPWSTR QuotedDropList(IDataObject *pDataObject)
 	DWORD cFiles, iFile, cchFiles;
 	LPWSTR szFiles = nullptr, pch;
 	FORMATETC fmtetc = { CF_HDROP, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
-	STGMEDIUM stgmed = {};
 
-	if (pDataObject->GetData(&fmtetc, &stgmed) == S_OK)
+	if (com_utils::stg_medium stgmed; pDataObject->GetData(&fmtetc, stgmed.GetAddressOf()) == S_OK)
 	{
 		// Yippie! the data is there, so go get it!
 		hdrop = reinterpret_cast<HDROP>(stgmed.hGlobal);
@@ -63,9 +63,6 @@ LPWSTR QuotedDropList(IDataObject *pDataObject)
 				
 			cchFiles -= cchFile + 1 + 2;
 		}
-
-		// release the data using the COM API
-		ReleaseStgMedium(&stgmed);
 	}
 
 	return szFiles;
@@ -182,8 +179,8 @@ LPWSTR QuotedContentList(IDataObject *pDataObject)
 		if (SUCCEEDED(pDataObject->QueryGetData(&contents_format)))
 		{ 
 			// Get the descriptor information
-			STGMEDIUM sm_desc= {};
-			if (FAILED(pDataObject->GetData(&descriptor_format, &sm_desc)))
+			com_utils::stg_medium sm_desc= {};
+			if (FAILED(pDataObject->GetData(&descriptor_format, sm_desc.GetAddressOf())))
 				return nullptr;
 
 			auto file_group_descriptor = static_cast<FILEGROUPDESCRIPTORW*>(GlobalLock(sm_desc.hGlobal));
@@ -208,9 +205,8 @@ LPWSTR QuotedContentList(IDataObject *pDataObject)
 			{
 				file_descriptor = file_group_descriptor->fgd[file_index];
 				contents_format.lindex = file_index;
-				STGMEDIUM sm_content = {};
 
-				if (SUCCEEDED(pDataObject->GetData(&contents_format, &sm_content)))
+				if (com_utils::stg_medium sm_content; SUCCEEDED(pDataObject->GetData(&contents_format, sm_content.GetAddressOf())))
 				{
 					// Dump stream to a file
 					WCHAR szTempFile[MAXPATHLEN*2+1];
@@ -234,13 +230,10 @@ LPWSTR QuotedContentList(IDataObject *pDataObject)
 							StringCchCatW(szFiles, cchFiles, L" ");
 						StringCchCatW(szFiles, cchFiles, szTempFile);
 					}
-
-					ReleaseStgMedium(&sm_content);
 				}
 			}
 
 			GlobalUnlock(sm_desc.hGlobal);
-			ReleaseStgMedium(&sm_desc);
 
 			if (szFiles[0] == '\0')
 			{

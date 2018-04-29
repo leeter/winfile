@@ -997,7 +997,7 @@ Callback_Function(FMIFS_PACKET_TYPE   PacketType,
  *
  */
 
-BOOL
+INT_PTR
 CancelDlgProc(HWND hDlg,
    UINT message,
    WPARAM wParam,
