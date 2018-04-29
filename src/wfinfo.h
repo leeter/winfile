@@ -10,14 +10,26 @@
 
 ********************************************************************/
 
+#pragma once
+
 #ifndef _WFINFO_H
 #define _WFINFO_H
+#if defined __cplusplus
+extern "C" {
+#endif
 
 #ifdef _GLOBALS
+#undef Extern
 #define Extern
 #define EQ(x) = x
 #else
+#ifndef Extern
+#ifdef __cplusplus 
+#define Extern extern "C"
+#else
 #define Extern extern
+#endif
+#endif
 #define EQ(x)
 #endif
 
@@ -165,5 +177,8 @@ Extern HANDLE hThreadUpdate;
 Extern HANDLE hEventUpdate;
 Extern HANDLE hEventUpdatePartial;
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ndef _WFINFO_H

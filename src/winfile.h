@@ -941,7 +941,13 @@ typedef struct _DRIVE_INFO {
 #define Extern
 #define EQ(x) = x
 #else
+#ifndef Extern
+#ifdef __cplusplus 
+#define Extern extern "C"
+#else
 #define Extern extern
+#endif
+#endif
 #define EQ(x)
 #endif
 
@@ -1274,7 +1280,7 @@ Extern HFONT hfontDriveList;
 Extern HFONT hFont;
 Extern HFONT hFontStatus;
 
-Extern HANDLE hfmifsDll EQ( NULL );
+Extern HMODULE hfmifsDll EQ( NULL );
 
 Extern HACCEL  hAccel            EQ( NULL );
 Extern HINSTANCE  hAppInstance;
