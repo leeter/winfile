@@ -9,10 +9,12 @@
 
 ********************************************************************/
 
+#include <sstream>
 #include "BagOValues.h"
 #include <iterator>
 #include <atomic>
 #include <deque>
+#include <string_view>
 #include <PathCch.h>
 #include "winfile.h"
 #include "treectl.h"
@@ -57,7 +59,7 @@ namespace {
 // -1: path a is a prefix of path b
 // +1: path b is a prefix of path a
 // +2: first difference in the paths has b sort lower
-int ParentOrdering(const PDNODE& a, const PDNODE& b)
+static int ParentOrdering(const PDNODE& a, const PDNODE& b)
 {
 	int wCmp;
 	if (a->nLevels == b->nLevels)
@@ -115,13 +117,7 @@ int ParentOrdering(const PDNODE& a, const PDNODE& b)
 	}
 }
 
-// returns true if a strictly less than b
-bool CompareNodes(const PDNODE& a, const PDNODE& b)
-{
-	return ParentOrdering(a, b) < 0;
-}
-
-std::vector<PDNODE> FilterBySubtree(std::vector<PDNODE> const& parents, std::vector<PDNODE>  const& children)
+static std::vector<PDNODE> FilterBySubtree(std::vector<PDNODE> const& parents, std::vector<PDNODE>  const& children)
 {
 	std::vector<PDNODE> results;
 
@@ -132,13 +128,13 @@ std::vector<PDNODE> FilterBySubtree(std::vector<PDNODE> const& parents, std::vec
 				 [&parents](auto const& child)
 	{
 		PDNODE parent = child->pParent;
-		return (find(std::cbegin(parents), std::cend(parents), parent) != std::end(parents));
+		return (std::find(std::cbegin(parents), std::cend(parents), parent) != std::cend(parents));
 	});
 
 	return results;
 }
 
-std::vector<PDNODE> TreeIntersection(std::vector<std::vector<PDNODE>>& trees)
+static std::vector<PDNODE> TreeIntersection(std::vector<std::vector<PDNODE>>& trees)
 {
 	std::vector<PDNODE> result;
 
@@ -152,7 +148,11 @@ std::vector<PDNODE> TreeIntersection(std::vector<std::vector<PDNODE>>& trees)
 	size_t maxOutput = 0;
 	for (auto& tree : trees)
 	{
-		std::sort(tree.begin(), tree.end(), CompareNodes);
+		std::sort(tree.begin(), tree.end(),
+			// returns true if a strictly less than b
+			[](const auto & a, const auto & b) {
+			return ParentOrdering(a, b) < 0;
+		});
 		if (tree.size() > maxOutput)
 			maxOutput = tree.size();
 	}
@@ -257,12 +257,10 @@ std::vector<PDNODE> TreeIntersection(std::vector<std::vector<PDNODE>>& trees)
 	return (*combined);
 }
 
-PDNODE CreateNode(PDNODE pParentNode, WCHAR *szName, DWORD dwAttribs)
+static PDNODE CreateNode(PDNODE pParentNode, const std::wstring_view szName, DWORD dwAttribs)
 {
-	PDNODE pNode;
-	DWORD len = wcslen(szName);
 
-	pNode = (PDNODE)LocalAlloc(LPTR, sizeof(DNODE) + ByteCountOf(len));
+	auto pNode = static_cast<PDNODE>(LocalAlloc(LPTR, sizeof(DNODE) + ByteCountOf(szName.size())));
 	if (!pNode)
 	{
 		return nullptr;
@@ -275,7 +273,7 @@ PDNODE CreateNode(PDNODE pParentNode, WCHAR *szName, DWORD dwAttribs)
 	pNode->dwAttribs = dwAttribs;
 	pNode->dwExtent = (DWORD)-1;
 
-	lstrcpy(pNode->szName, szName);
+	StringCchCopyW(pNode->szName, szName.size(), szName.data());
 
 	if (pParentNode)
 		pParentNode->wFlags |= TF_HASCHILDREN;      // mark the parent
@@ -283,10 +281,6 @@ PDNODE CreateNode(PDNODE pParentNode, WCHAR *szName, DWORD dwAttribs)
 	return pNode;
 }
 
-// for some reason this causes an error in xlocnum
-#undef abs
-
-#include <sstream>
 
 auto SplitIntoWords(LPCTSTR szText)
 {
@@ -304,16 +298,7 @@ auto SplitIntoWords(LPCTSTR szText)
 	return words;
 }
 
-void FreeDirectoryBagOValues(BagOValues<PDNODE> *pbov, std::vector<PDNODE> *pNodes)
-{
-	
-
-	// free that vector and the BagOValues itself
-	delete pNodes;
-	delete pbov;
-}
-
-BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNodeParent, DWORD scanEpoc)
+static BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNodeParent, DWORD scanEpoc)
 {
 	LFNDTA lfndta;
 	WCHAR szPath[MAXPATHLEN];
@@ -423,7 +408,7 @@ BOOL BuildDirectoryBagOValues(values_bag& result_bag, LPCTSTR szRoot, PDNODE pNo
 	return TRUE;
 }
 
-auto GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
+static auto GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 {
 	if (g_valuesBag == nullptr)
 		return std::vector<PDNODE>{};
@@ -480,12 +465,12 @@ auto GetDirectoryOptionsFromText(LPCTSTR szText, BOOL *pbLimited)
 	return final_options;
 }
 
-VOID UpdateGotoList(HWND hDlg)
+static void UpdateGotoList(HWND hDlg)
 {
 	BOOL bLimited = FALSE;
 	TCHAR szText[MAXPATHLEN];
 
-	DWORD dw = GetDlgItemText(hDlg, IDD_GOTODIR, szText, COUNTOF(szText));
+	auto dw = GetDlgItemTextW(hDlg, IDD_GOTODIR, szText, std::size(szText));
 
 	const auto options = GetDirectoryOptionsFromText(szText, &bLimited);
 
@@ -523,7 +508,7 @@ VOID UpdateGotoList(HWND hDlg)
 WNDPROC wpOrigEditProc;
 
 // Subclass procedure: use arrow keys to change selection in listbox below.
-LRESULT APIENTRY GotoEditSubclassProc(
+static LRESULT APIENTRY GotoEditSubclassProc(
 	HWND hwnd,
 	UINT uMsg,
 	WPARAM wParam,
@@ -561,13 +546,13 @@ LRESULT APIENTRY GotoEditSubclassProc(
 		}
 		break;
 	}
-	return CallWindowProc(wpOrigEditProc, hwnd, uMsg, wParam, lParam);
+	return CallWindowProcW(wpOrigEditProc, hwnd, uMsg, wParam, lParam);
 }
 
 VOID
 SetCurrentPathOfWindow(LPWSTR szPath)
 {
-	HWND hwndActive = (HWND)SendMessage(hwndMDIClient, WM_MDIGETACTIVE, 0, 0L);
+	HWND hwndActive = (HWND)SendMessageW(hwndMDIClient, WM_MDIGETACTIVE, 0, 0L);
 
 	HWND hwndNew = CreateDirWindow(szPath, TRUE, hwndActive);
 
@@ -623,7 +608,7 @@ GotoDirDlgProc(HWND hDlg, UINT wMsg, WPARAM wParam, LPARAM lParam)
 
 			EndDialog(hDlg, TRUE);
 
-			DWORD iSel = SendDlgItemMessage(hDlg, IDD_GOTOLIST, LB_GETCURSEL, 0, 0);
+			auto iSel = SendDlgItemMessageW(hDlg, IDD_GOTOLIST, LB_GETCURSEL, 0, 0);
 			if (iSel == LB_ERR)
 			{
 				if (GetDlgItemText(hDlg, IDD_GOTODIR, szPath, COUNTOF(szPath)) != 0)

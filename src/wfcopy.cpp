@@ -12,6 +12,7 @@
 #include <iterator>
 #include <thread>
 #include <wrl/wrappers/corewrappers.h>
+#include <strsafe.h>
 #include <windows.h>
 #include <PathCch.h>
 #include "winfile.h"
@@ -239,7 +240,7 @@ QualifyPath(LPTSTR lpszPath)
     INT cb, nSpaceLeft, i, j;
     TCHAR szTemp[MAXPATHLEN];
     DRIVE drive = 0;
-    LPTSTR pOrig, pT;
+    LPWSTR pOrig, pT;
     BOOL flfn = FALSE;
     BOOL fQuote = FALSE;
 
@@ -298,7 +299,7 @@ JAPANEND
 
     pOrig = szTemp;
 
-    if (ISUNCPATH(pOrig)) {
+    if (PathIsUNCEx(pOrig, nullptr)) {
 
        //
        // Stop at"\\foo\bar"
@@ -658,20 +659,19 @@ IsRootDirectory( LPTSTR pPath)
 BOOL
 IsDirectory(LPTSTR pPath)
 {
-  LPTSTR pT;
-  TCHAR szTemp[MAXPATHLEN];
+  WCHAR szTemp[MAXPATHLEN];
 
   if (IsRootDirectory(pPath))
       return TRUE;
 
   // check for "." and ".."
-  pT = FindFileName(pPath);
+  auto pT = FindFileName(pPath);
 
   if (ISDOTDIR(pT)) {
      return TRUE;
   }
 
-  lstrcpy(szTemp, pPath);
+  StringCchCopyW(szTemp, std::size(szTemp), pPath);
 
   //
   // QualifyPath
@@ -1405,7 +1405,7 @@ GetNextPair(PCOPYROOT pcr, LPTSTR pFrom,
 {
    LPTSTR pT;                     // Temporary pointer
    DWORD dwOp;                    // Return value (operation to perform
-   PLFNDTA pDTA;                  // Pointer to file DTA data
+   PLFNDTA pDTA = nullptr;                  // Pointer to file DTA data
 
    STKCHK();
    *pFrom = CHAR_NULL;
@@ -1751,7 +1751,7 @@ ReturnPair:
          //
          // Don't check if ntfs, just if has altname!
          //
-         if (pDTA->fd.cAlternateFileName[0]) {
+         if (pDTA && pDTA->fd.cAlternateFileName[0]) {
 
             RemoveLast(pToPath);
             AppendToPath(pToPath,pDTA->fd.cAlternateFileName);
@@ -1821,11 +1821,11 @@ MergeNames:
 VOID
 CdDotDot (LPTSTR szOrig)
 {
-   TCHAR szTemp[MAXPATHLEN];
+	WCHAR szTemp[MAXPATHLEN] = {};
 
-   lstrcpy(szTemp, szOrig);
-   StripFilespec(szTemp);
-   SetCurrentDirectory(szTemp);
+	StringCchCopyW(szTemp, std::size(szTemp), szOrig);
+	PathCchRemoveFileSpec(szTemp, std::size(szTemp));
+	SetCurrentDirectoryW(szTemp);
 }
 
 /* p is a fully qualified ANSI string. */
@@ -2120,9 +2120,6 @@ static VOID   WFMoveCopyDriverThread(PCOPYINFO pCopyInfo);
 DWORD
 WFMoveCopyDriver(PCOPYINFO pCopyInfo)
 {
-   /*HANDLE hThreadCopy;
-   DWORD dwIgnore;*/
-
    //
    // Move/Copy things.
    //
@@ -2141,21 +2138,6 @@ WFMoveCopyDriver(PCOPYINFO pCopyInfo)
 
 	   return ex.code().value();
    }
-   /*hThreadCopy = CreateThread( NULL,
-      0L,
-      (LPTHREAD_START_ROUTINE)WFMoveCopyDriverThread,
-      pCopyInfo,
-      0L,
-      &dwIgnore);
-
-   if (!hThreadCopy) {
-
-      
-   }
-
-
-   CloseHandle(hThreadCopy);*/
-
    return 0;
 }
 

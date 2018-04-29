@@ -537,8 +537,8 @@ ReadDirLevel(
    HWND      hwndParent;
    HWND      hwndDir;
    LPXDTALINK lpStart;
-   LPXDTA*  plpxdta;
-   LPXDTA   lpxdta;
+   LPXDTA*  plpxdta = NULL;
+   LPXDTA   lpxdta = NULL;
    INT       count;
 
    UINT      uYieldCount = 0;
@@ -640,7 +640,7 @@ ReadDirLevel(
          }
       }
 
-      if (count > 0)
+      if (count > 0 && lpxdta)
       {
          bFound = TRUE;
 
@@ -923,7 +923,7 @@ StealTreeData(
    HWND hwndLB,
    LPWSTR szDir)
 {
-   HWND hwndSrc, hwndT;
+   HWND hwndSrc, hwndT = NULL;
    WCHAR szSrc[MAXPATHLEN];
    DWORD dwView;
    DWORD dwAttribs;

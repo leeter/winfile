@@ -984,11 +984,11 @@ AppCommandProc( DWORD id)
       
    case IDM_ASSOCIATE:
 
-      DialogBox(hAppInstance, (LPTSTR) MAKEINTRESOURCE(ASSOCIATEDLG), hwndFrame, (DLGPROC)AssociateDlgProc);
+      DialogBox(hAppInstance, (LPTSTR) MAKEINTRESOURCE(ASSOCIATEDLG), hwndFrame, AssociateDlgProc);
       break;
 
    case IDM_GOTODIR:
-      DialogBox(hAppInstance, (LPTSTR)MAKEINTRESOURCE(GOTODIRDLG), hwndFrame, (DLGPROC)GotoDirDlgProc);
+      DialogBox(hAppInstance, (LPTSTR)MAKEINTRESOURCE(GOTODIRDLG), hwndFrame, GotoDirDlgProc);
 	  break;
 
    case IDM_HISTORYBACK:

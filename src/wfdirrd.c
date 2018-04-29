@@ -61,7 +61,7 @@ InitDirRead(VOID)
    bDirReadRun = TRUE;
    InitializeCriticalSection(&CriticalSectionDirRead);
 
-   hEventDirRead = CreateEvent(NULL, FALSE, FALSE, NULL);
+   hEventDirRead = CreateEventW(NULL, FALSE, FALSE, NULL);
 
    if (!hEventDirRead) {
 
